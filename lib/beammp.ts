@@ -499,6 +499,7 @@ export async function deleteBeammpMod(kind: ModFolderKind, rawName: string) {
 export async function controlBeammpServer(
   operation: "restart" | "recreate"
 ) {
+  const envFile = getEnv("BEAMMP_RUNTIME_ENV_FILE")
   const composeFile = getEnv("BEAMMP_DOCKER_COMPOSE_FILE")
   const serviceName = getEnv("BEAMMP_DOCKER_SERVICE") ?? "beammp-server"
 
@@ -509,13 +510,23 @@ export async function controlBeammpServer(
   await access(composeFile, constants.R_OK)
   await access(dockerSocketPath, constants.R_OK | constants.W_OK)
 
+  if (envFile) {
+    await access(envFile, constants.R_OK)
+  }
+
+  const composeArgs = ["compose"]
+
+  if (envFile) {
+    composeArgs.push("--env-file", envFile)
+  }
+
+  composeArgs.push("-f", composeFile)
+
   const args =
     operation === "restart"
-      ? ["compose", "-f", composeFile, "restart", serviceName]
+      ? [...composeArgs, "restart", serviceName]
       : [
-          "compose",
-          "-f",
-          composeFile,
+          ...composeArgs,
           "up",
           "-d",
           "--force-recreate",
