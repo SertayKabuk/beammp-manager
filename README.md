@@ -7,7 +7,7 @@ BeamMP mod and map admin built with Next.js, shadcn/ui, and Google login.
 - Google sign-in with cookie/JWT sessions
 - Allowlist-only access via `ALLOWED_EMAILS`
 - No database required
-- Reads mounted BeamMP server/client mod folders
+- Reads and manages mounted BeamMP server/client mod folders
 - Free-text `BEAMMP_MAP` editor
 - Docker-based BeamMP server restart and recreate from the dashboard
 - Safe map writeback through a shared runtime env file instead of rewriting `docker-compose.yaml`
@@ -64,6 +64,18 @@ Recommended container paths:
 - client mods: `/beammp-mounted/client`
 
 The dashboard reads mod listings directly from those mounted paths.
+If you want uploads and deletes to work, mount those folders as writable volumes
+in the manager container.
+
+For Docker Compose control actions like recreate, the safest production setup is
+to mirror the full host BeamMP compose directory into the manager container at
+the exact same absolute path:
+
+- `/home/ubuntu/docker-compose/beammp:/home/ubuntu/docker-compose/beammp`
+
+That is important because `docker compose -f ... up --force-recreate ...` is
+resolved by the Docker Compose client inside the manager container, and it needs
+the compose file, `env_file`, and bind-mount source paths to exist there too.
 
 ## Map editing
 
@@ -92,13 +104,18 @@ manager container:
 
 Recommended runtime values inside the manager container:
 
-- `BEAMMP_RUNTIME_ENV_FILE=/beammp-runtime.env`
-- `BEAMMP_DOCKER_COMPOSE_FILE=/beammp-compose/docker-compose.yaml`
+- `BEAMMP_RUNTIME_ENV_FILE=/home/ubuntu/docker-compose/beammp/beammp-runtime.env`
+- `BEAMMP_DOCKER_COMPOSE_FILE=/home/ubuntu/docker-compose/beammp/docker-compose.yaml`
 - `BEAMMP_DOCKER_SERVICE=beammp-server`
 
 This lets the app run either `docker compose -f ... restart beammp-server` or
 `docker compose -f ... up -d --force-recreate --no-deps beammp-server` without
 editing the compose file directly.
+
+After either action, the manager verifies the BeamMP game server container status
+with Docker before showing success. If Docker accepts the command but the game
+server exits immediately or never becomes healthy, the UI now reports that as an
+error instead of a false success.
 
 ## Example Docker Compose wiring
 
@@ -109,11 +126,34 @@ Your existing BeamMP compose already uses:
 - `/home/ubuntu/docker-compose/beammp/client-mods:/beammp/Resources/Client`
 - `/home/ubuntu/docker-compose/beammp/server-mods:/beammp/Resources/Server`
 
-For the manager app, mirror those folders into the manager container as read-only mounts, mount `/home/ubuntu/docker-compose/beammp/beammp-runtime.env` to `/beammp-runtime.env`, mount the host compose file, and mount `/var/run/docker.sock` for restart/recreate control.
+For the manager app, mirror the whole host compose directory into the same path
+inside the manager container and mount `/var/run/docker.sock` for
+restart/recreate control.
+
+To allow mod uploads and deletes from the UI, make the manager mounts writable:
+
+- `/home/ubuntu/docker-compose/beammp:/home/ubuntu/docker-compose/beammp`
+
+Then point the app at those mirrored paths:
+
+- `BEAMMP_SERVER_MODS_PATH=/home/ubuntu/docker-compose/beammp/server-mods`
+- `BEAMMP_CLIENT_MODS_PATH=/home/ubuntu/docker-compose/beammp/client-mods`
+- `BEAMMP_RUNTIME_ENV_FILE=/home/ubuntu/docker-compose/beammp/beammp-runtime.env`
+- `BEAMMP_DOCKER_COMPOSE_FILE=/home/ubuntu/docker-compose/beammp/docker-compose.yaml`
+
+The manager supports both:
+
+- single-file uploads such as `.zip` mods
+- folder uploads where the browser sends the folder contents with relative paths
+- deleting top-level zip files or top-level mod folders in either mounted mod directory
+
+If you only mount `/beammp-mounted/...` paths but run Docker Compose control
+commands against a compose file that references `/home/ubuntu/docker-compose/beammp/...`,
+restart may work while recreate fails with errors like `env file ... not found`.
+Mirroring the full host directory avoids that mismatch.
 
 ## Notes
 
-- Uploading new mods is intentionally not included.
 - Access is restricted to Google accounts listed in `ALLOWED_EMAILS`.
 - If `BEAMMP_RUNTIME_ENV_FILE` is not mounted, map editing becomes read-only.
 - Mounting the Docker socket gives this admin app permission to control Docker on the host, so keep the allowlist tight.

@@ -41,14 +41,11 @@ services:
       - AUTH_GOOGLE_SECRET=${AUTH_GOOGLE_SECRET}
       - ALLOWED_EMAILS=${ALLOWED_EMAILS}
       - BEAMMP_MAP=/levels/DownhillDestruction/info.json
-      - BEAMMP_SERVER_MODS_PATH=/beammp-mounted/server
-      - BEAMMP_CLIENT_MODS_PATH=/beammp-mounted/client
-      - BEAMMP_RUNTIME_ENV_FILE=/beammp-runtime.env
-      - BEAMMP_DOCKER_COMPOSE_FILE=/beammp-compose/docker-compose.yaml
+      - BEAMMP_SERVER_MODS_PATH=/home/ubuntu/docker-compose/beammp/server-mods
+      - BEAMMP_CLIENT_MODS_PATH=/home/ubuntu/docker-compose/beammp/client-mods
+      - BEAMMP_RUNTIME_ENV_FILE=/home/ubuntu/docker-compose/beammp/beammp-runtime.env
+      - BEAMMP_DOCKER_COMPOSE_FILE=/home/ubuntu/docker-compose/beammp/docker-compose.yaml
       - BEAMMP_DOCKER_SERVICE=beammp-server
     volumes:
-      - /home/ubuntu/docker-compose/beammp/server-mods:/beammp-mounted/server:ro
-      - /home/ubuntu/docker-compose/beammp/client-mods:/beammp-mounted/client:ro
-      - /home/ubuntu/docker-compose/beammp/beammp-runtime.env:/beammp-runtime.env
-      - /home/ubuntu/docker-compose/beammp/docker-compose.yaml:/beammp-compose/docker-compose.yaml:ro
+      - /home/ubuntu/docker-compose/beammp:/home/ubuntu/docker-compose/beammp
       - /var/run/docker.sock:/var/run/docker.sock

@@ -11,6 +11,7 @@ import { redirect } from "next/navigation"
 
 import { auth, signOut } from "@/auth"
 import { MapEditor } from "@/components/map-editor"
+import { ModDirectoryManager } from "@/components/mod-directory-manager"
 import { RestartServerForm } from "@/components/restart-server-form"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,7 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { readBeammpState, type ModsDirectoryState } from "@/lib/beammp"
+import { readBeammpState } from "@/lib/beammp"
 
 function sourceLabel(source: "runtime-env-file" | "process-env" | "missing") {
   if (source === "runtime-env-file") {
@@ -33,60 +34,6 @@ function sourceLabel(source: "runtime-env-file" | "process-env" | "missing") {
   }
 
   return "missing"
-}
-
-function DirectoryCard({ directory }: { directory: ModsDirectoryState }) {
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between gap-3">
-          <div className="space-y-1">
-            <CardTitle>{directory.label}</CardTitle>
-            <CardDescription>
-              {directory.path ? (
-                <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-                  {directory.path}
-                </code>
-              ) : (
-                "Path not configured"
-              )}
-            </CardDescription>
-          </div>
-
-          <Badge variant={directory.exists ? "secondary" : "destructive"}>
-            {directory.exists ? "mounted" : "missing"}
-          </Badge>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
-        {directory.error ? (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-            {directory.error}
-          </div>
-        ) : null}
-
-        {directory.files.length > 0 ? (
-          <ul className="space-y-2 text-sm">
-            {directory.files.map((file) => (
-              <li
-                key={file}
-                className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2"
-              >
-                <span className="truncate">{file}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-            {directory.exists
-              ? "No mods found in this mounted folder yet."
-              : "Mount this folder into the container to view mods here."}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
 }
 
 export default async function Home() {
@@ -276,6 +223,29 @@ export default async function Home() {
               </div>
 
               <div className="rounded-lg border border-border bg-muted/30 p-3">
+                <p className="font-medium text-foreground">Container status</p>
+                <p>
+                  {state.dockerControl.serviceStatus.status ??
+                    "Unknown / not created"}
+                </p>
+                {state.dockerControl.serviceStatus.health ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Health: {state.dockerControl.serviceStatus.health}
+                  </p>
+                ) : null}
+                {state.dockerControl.serviceStatus.exitCode !== null ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Exit code: {state.dockerControl.serviceStatus.exitCode}
+                  </p>
+                ) : null}
+                {state.dockerControl.serviceStatus.containerName ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Container: {state.dockerControl.serviceStatus.containerName}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="rounded-lg border border-border bg-muted/30 p-3">
                 <p className="font-medium text-foreground">Docker socket</p>
                 <p>{state.dockerControl.socketPath}</p>
               </div>
@@ -286,6 +256,15 @@ export default async function Home() {
                   {state.runtimeEnvFile ?? "/beammp-runtime.env"}
                 </p>
               </div>
+
+              {state.dockerControl.serviceStatus.details ? (
+                <div className="rounded-lg border border-border bg-muted/30 p-3">
+                  <p className="font-medium text-foreground">Status details</p>
+                  <p className="break-words">
+                    {state.dockerControl.serviceStatus.details}
+                  </p>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         </section>
@@ -297,11 +276,33 @@ export default async function Home() {
               <h2 className="text-xl font-semibold">Mounted mod folders</h2>
             </div>
 
-            <DirectoryCard directory={state.serverMods} />
+            <Card>
+              <CardHeader>
+                <CardTitle>Server mod management</CardTitle>
+                <CardDescription>
+                  Upload zip files, upload folder-based mods, or delete existing
+                  server-side mods from the mounted BeamMP server folder.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ModDirectoryManager directory={state.serverMods} />
+              </CardContent>
+            </Card>
           </div>
 
           <div className="pt-9 lg:pt-0">
-            <DirectoryCard directory={state.clientMods} />
+            <Card>
+              <CardHeader>
+                <CardTitle>Client mod management</CardTitle>
+                <CardDescription>
+                  Upload zip files, upload folder-based mods, or delete existing
+                  client-side mods from the mounted BeamMP client folder.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ModDirectoryManager directory={state.clientMods} />
+              </CardContent>
+            </Card>
           </div>
         </section>
       </div>
