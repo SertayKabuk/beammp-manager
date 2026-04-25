@@ -36,6 +36,7 @@ services:
       - "traefik.http.services.beammp-manager.loadbalancer.server.port=3000"
     environment:
       - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_URL=https://beamng-manager.sertay.com
       - AUTH_GOOGLE_ID=${AUTH_GOOGLE_ID}
       - AUTH_GOOGLE_SECRET=${AUTH_GOOGLE_SECRET}
       - ALLOWED_EMAILS=${ALLOWED_EMAILS}

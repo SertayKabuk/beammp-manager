@@ -11,8 +11,29 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-export default async function LoginPage() {
+function getErrorMessage(error: string | undefined) {
+  switch (error) {
+    case "not-allowed":
+      return "This Google account is not in ALLOWED_EMAILS for the manager container."
+    case "missing-allowlist":
+      return "ALLOWED_EMAILS is empty or missing inside the manager container. Add it to the container environment and try again."
+    case "missing-email":
+      return "Google did not return an email address for this account."
+    case "AccessDenied":
+      return "Access was denied by the sign-in rules. In this app that usually means ALLOWED_EMAILS is missing or your email is not listed."
+    default:
+      return null
+  }
+}
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
   const session = await auth()
+  const params = await searchParams
+  const errorMessage = getErrorMessage(params.error)
 
   if (session) {
     redirect("/")
@@ -48,6 +69,12 @@ export default async function LoginPage() {
             <p className="text-sm text-muted-foreground">
               Access is restricted to emails listed in <code>ALLOWED_EMAILS</code>.
             </p>
+
+            {errorMessage ? (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                {errorMessage}
+              </div>
+            ) : null}
           </form>
         </CardContent>
       </Card>

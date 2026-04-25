@@ -36,14 +36,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const allowedEmails = getAllowedEmails()
 
       if (!email) {
-        return false
+        return "/login?error=missing-email"
       }
 
       if (allowedEmails.size === 0) {
-        return false
+        return "/login?error=missing-allowlist"
       }
 
-      return allowedEmails.has(email)
+      if (!allowedEmails.has(email)) {
+        return "/login?error=not-allowed"
+      }
+
+      return true
     },
   },
 })

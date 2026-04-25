@@ -17,6 +17,7 @@ BeamMP mod and map admin built with Next.js, shadcn/ui, and Google login.
 Create a local `.env` file:
 
 - `AUTH_SECRET`
+- `AUTH_URL` (your public app URL, for example `https://beamng-manager.sertay.com`)
 - `AUTH_GOOGLE_ID`
 - `AUTH_GOOGLE_SECRET`
 - `ALLOWED_EMAILS`
@@ -32,6 +33,19 @@ Create a local `.env` file:
 Create a Google OAuth app and add this callback URL:
 
 `http://localhost:3000/api/auth/callback/google`
+
+For production, use your public domain instead, for example:
+
+`https://beamng-manager.sertay.com/api/auth/callback/google`
+
+If redirects ever show a Docker/container hostname like `https://acfccdd5eadd:3000`, set `AUTH_URL` to your real public domain. Auth.js will then use that canonical URL for callback and sign-in redirects.
+
+If you see `AccessDenied` in the manager logs during Google sign-in, this app's sign-in callback is rejecting the login. In practice that almost always means one of these is true:
+
+- the Google email is not listed in `ALLOWED_EMAILS`
+- `ALLOWED_EMAILS` is empty or missing inside the running `beammp-manager` container
+
+Because the compose file uses container environment variables for `AUTH_*` and `ALLOWED_EMAILS`, make sure those values are really present on the host where Docker Compose runs (for example via a host `.env` file or explicit values in the compose file).
 
 ## Local development
 
