@@ -74,6 +74,7 @@ export function ModDirectoryManager({
             type="file"
             name="mods"
             multiple
+            required
             disabled={!directory.canManage || isUploading}
           />
 
@@ -97,6 +98,7 @@ export function ModDirectoryManager({
             type="file"
             name="mods"
             multiple
+            required
             disabled={!directory.canManage || isUploading}
             {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
           />

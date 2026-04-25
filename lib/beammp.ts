@@ -112,6 +112,20 @@ function getUploadedRelativePath(file: File) {
   return relativePath?.trim() ? relativePath : file.name
 }
 
+function isMeaningfulUploadedFile(file: File) {
+  const relativePath = getUploadedRelativePath(file).trim()
+
+  if (!relativePath) {
+    return false
+  }
+
+  if (file.size === 0 && file.name === "blob" && relativePath === "blob") {
+    return false
+  }
+
+  return true
+}
+
 function sanitizeUploadedRelativePath(rawPath: string) {
   const segments = rawPath
     .split(/[\\/]+/)
@@ -437,7 +451,7 @@ export async function uploadBeammpMods(kind: ModFolderKind, files: File[]) {
 
   await access(dirPath, constants.R_OK | constants.W_OK)
 
-  const validFiles = files.filter((file) => file.size > 0 || file.name)
+  const validFiles = files.filter(isMeaningfulUploadedFile)
 
   if (validFiles.length === 0) {
     throw new Error("Please choose one or more mod files to upload.")
