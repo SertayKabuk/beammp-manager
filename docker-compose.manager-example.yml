@@ -1,0 +1,53 @@
+services:
+  beammp-server:
+    image: rouhim/beammp-server
+    restart: always
+    network_mode: "host"
+    stdin_open: true
+    tty: true
+    env_file:
+      - /home/ubuntu/docker-compose/beammp/beammp-runtime.env
+    environment:
+      - BEAMMP_PRIVATE=true
+      - BEAMMP_MAX_CARS=1
+      - BEAMMP_MAX_PLAYERS=8
+      - BEAMMP_NAME=batakhane
+      - BEAMMP_DESCRIPTION=private
+      - BEAMMP_PORT=30814
+      - BEAMMP_DEBUG=false
+      - BEAMMP_AUTH_KEY=replace-with-your-auth-key
+    volumes:
+      - /home/ubuntu/docker-compose/beammp/client-mods:/beammp/Resources/Client
+      - /home/ubuntu/docker-compose/beammp/server-mods:/beammp/Resources/Server
+
+  beammp-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    expose:
+      - 3000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.beammp-manager.entrypoints=websecure"
+      - "traefik.http.routers.beammp-manager.rule=Host(`beamng-manager.sertay.com`)"
+      - "traefik.http.routers.beammp-manager.tls.certresolver=myresolver"
+      - "traefik.docker.network=traefik_network"
+      - "traefik.http.services.beammp-manager.loadbalancer.server.port=3000"
+    environment:
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_GOOGLE_ID=${AUTH_GOOGLE_ID}
+      - AUTH_GOOGLE_SECRET=${AUTH_GOOGLE_SECRET}
+      - ALLOWED_EMAILS=${ALLOWED_EMAILS}
+      - BEAMMP_MAP=/levels/DownhillDestruction/info.json
+      - BEAMMP_SERVER_MODS_PATH=/beammp-mounted/server
+      - BEAMMP_CLIENT_MODS_PATH=/beammp-mounted/client
+      - BEAMMP_RUNTIME_ENV_FILE=/beammp-runtime.env
+      - BEAMMP_DOCKER_COMPOSE_FILE=/beammp-compose/docker-compose.yaml
+      - BEAMMP_DOCKER_SERVICE=beammp-server
+    volumes:
+      - /home/ubuntu/docker-compose/beammp/server-mods:/beammp-mounted/server:ro
+      - /home/ubuntu/docker-compose/beammp/client-mods:/beammp-mounted/client:ro
+      - /home/ubuntu/docker-compose/beammp/beammp-runtime.env:/beammp-runtime.env
+      - /home/ubuntu/docker-compose/beammp/docker-compose.yaml:/beammp-compose/docker-compose.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock
