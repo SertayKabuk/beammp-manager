@@ -411,19 +411,18 @@ async function scanClientModsForMaps(clientModsPath: string | null): Promise<str
       zips.map(async (zipFile) => {
           try {
             const paths = await readZipEntryPaths(join(clientModsPath, zipFile))
-            console.log(`[map-scan] ${zipFile} — sample paths: ${paths.slice(0, 5).join(" | ")}`)
-            const mapsInZip: string[] = []
+            const mapsInZip = new Set<string>()
             for (const p of paths) {
-              const m = p.match(/(?:^|\/)levels\/([^/]+)\//)
+              const m = p.match(/^levels\/([^/]+)\//)
               if (m) {
                 found.add(m[1])
-                mapsInZip.push(m[1])
+                mapsInZip.add(m[1])
               }
             }
-            if (mapsInZip.length > 0) {
-              console.log(`[map-scan] ${zipFile} → maps: ${mapsInZip.join(", ")}`)
+            if (mapsInZip.size > 0) {
+              console.log(`[map-scan] ${zipFile} → maps: ${[...mapsInZip].join(", ")}`)
             } else {
-              console.log(`[map-scan] ${zipFile} → no levels/ hierarchy found (mod, not a map)`)
+              console.log(`[map-scan] ${zipFile} → no levels/ hierarchy (mod, not a map)`)
             }
           } catch (err) {
             console.warn(`[map-scan] ${zipFile} → skipped (${err instanceof Error ? err.message : err})`)
@@ -663,4 +662,28 @@ export async function controlBeammpServer(
       `Unable to ${operation} the BeamMP server.`
     )
   }
+}
+
+export async function fetchContainerLogs(lines = 200): Promise<string> {
+  const composeFile = getEnv("BEAMMP_DOCKER_COMPOSE_FILE")
+  const serviceName = getEnv("BEAMMP_DOCKER_SERVICE") ?? "beammp-server"
+
+  if (!composeFile) {
+    throw new Error("BEAMMP_DOCKER_COMPOSE_FILE is not configured.")
+  }
+
+  await access(dockerSocketPath, constants.R_OK | constants.W_OK)
+
+  const { stdout, stderr } = await execFileAsync("docker", [
+    "compose",
+    "-f",
+    composeFile,
+    "logs",
+    "--tail",
+    String(lines),
+    "--no-color",
+    serviceName,
+  ])
+
+  return (stdout + stderr).trim()
 }

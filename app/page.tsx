@@ -13,6 +13,7 @@ import { auth, signOut } from "@/auth"
 import { MapEditor } from "@/components/map-editor"
 import { ModDirectoryManager } from "@/components/mod-directory-manager"
 import { RestartServerForm } from "@/components/restart-server-form"
+import { ServerLogs } from "@/components/server-logs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -269,6 +270,21 @@ export default async function Home() {
             </CardContent>
           </Card>
         </section>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Container className="size-5 text-primary" />
+              Container logs
+            </CardTitle>
+            <CardDescription>
+              Last 200 lines from the BeamMP server container.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ServerLogs canControl={state.dockerControl.canControl} />
+          </CardContent>
+        </Card>
 
         <section className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-4">
