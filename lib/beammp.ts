@@ -411,9 +411,10 @@ async function scanClientModsForMaps(clientModsPath: string | null): Promise<str
       zips.map(async (zipFile) => {
           try {
             const paths = await readZipEntryPaths(join(clientModsPath, zipFile))
+            console.log(`[map-scan] ${zipFile} — sample paths: ${paths.slice(0, 5).join(" | ")}`)
             const mapsInZip: string[] = []
             for (const p of paths) {
-              const m = p.match(/^[^/]+\/levels\/([^/]+)\//)
+              const m = p.match(/(?:^|\/)levels\/([^/]+)\//)
               if (m) {
                 found.add(m[1])
                 mapsInZip.push(m[1])
