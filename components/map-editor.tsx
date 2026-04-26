@@ -43,7 +43,7 @@ export function MapEditor({
     knownPath ? currentMap : CUSTOM_VALUE
   )
 
-  const isCustom = availableMaps.length === 0 || selected === CUSTOM_VALUE
+  const isCustom = selected === CUSTOM_VALUE
 
   return (
     <form action={formAction} className="space-y-4">
@@ -52,21 +52,19 @@ export function MapEditor({
           BeamMP level / map path
         </label>
 
-        {availableMaps.length > 0 && (
-          <select
-            value={selected}
-            onChange={(e) => setSelected(e.target.value)}
-            disabled={!canWrite || isPending}
-            className={selectCn}
-          >
-            {availableMaps.map((m) => (
-              <option key={m} value={mapToPath(m)}>
-                {m}
-              </option>
-            ))}
-            <option value={CUSTOM_VALUE}>Custom path…</option>
-          </select>
-        )}
+        <select
+          value={selected}
+          onChange={(e) => setSelected(e.target.value)}
+          disabled={!canWrite || isPending}
+          className={selectCn}
+        >
+          {availableMaps.map((m) => (
+            <option key={m} value={mapToPath(m)}>
+              {m}
+            </option>
+          ))}
+          <option value={CUSTOM_VALUE}>Custom path…</option>
+        </select>
 
         {isCustom ? (
           <Input

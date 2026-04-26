@@ -397,27 +397,43 @@ async function readZipEntryPaths(filePath: string): Promise<string[]> {
 }
 
 async function scanClientModsForMaps(clientModsPath: string | null): Promise<string[]> {
-  if (!clientModsPath) return []
+  if (!clientModsPath) {
+    console.log("[map-scan] BEAMMP_CLIENT_MODS_PATH not set — skipping map detection")
+    return []
+  }
+  console.log(`[map-scan] Scanning ${clientModsPath}`)
   try {
     const entries = await readdir(clientModsPath)
+    const zips = entries.filter((e) => e.toLowerCase().endsWith(".zip"))
+    console.log(`[map-scan] Found ${zips.length} zip(s) in client mods folder`)
     const found = new Set<string>()
     await Promise.all(
-      entries
-        .filter((e) => e.toLowerCase().endsWith(".zip"))
-        .map(async (zipFile) => {
+      zips.map(async (zipFile) => {
           try {
             const paths = await readZipEntryPaths(join(clientModsPath, zipFile))
+            const mapsInZip: string[] = []
             for (const p of paths) {
               const m = p.match(/^[^/]+\/levels\/([^/]+)\//)
-              if (m) found.add(m[1])
+              if (m) {
+                found.add(m[1])
+                mapsInZip.push(m[1])
+              }
             }
-          } catch {
-            // skip corrupt or unreadable zips
+            if (mapsInZip.length > 0) {
+              console.log(`[map-scan] ${zipFile} → maps: ${mapsInZip.join(", ")}`)
+            } else {
+              console.log(`[map-scan] ${zipFile} → no levels/ hierarchy found (mod, not a map)`)
+            }
+          } catch (err) {
+            console.warn(`[map-scan] ${zipFile} → skipped (${err instanceof Error ? err.message : err})`)
           }
         })
     )
-    return [...found].sort(fileSorter.compare)
-  } catch {
+    const result = [...found].sort(fileSorter.compare)
+    console.log(`[map-scan] Detected maps: ${result.length > 0 ? result.join(", ") : "(none)"}`)
+    return result
+  } catch (err) {
+    console.error(`[map-scan] Failed to read ${clientModsPath}:`, err)
     return []
   }
 }

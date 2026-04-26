@@ -80,7 +80,7 @@ export function ModDirectoryManager({
 
           <Button type="submit" disabled={!directory.canManage || isUploading}>
             <Upload className="size-4" />
-            {isUploading ? "Uploading..." : "Upload selected files"}
+            {isUploading ? "Uploading..." : "Upload ZIP files"}
           </Button>
         </form>
 

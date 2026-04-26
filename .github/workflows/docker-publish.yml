@@ -84,6 +84,20 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Notify deployment webhook after a successful push
+      - name: Notify webhook
+        if: github.event_name != 'pull_request'
+        env:
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+        run: |
+          payload='{"ref":"refs/heads/main"}'
+          sig=$(printf '%s' "$payload" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" -hex | sed 's/^.* //')
+          curl -fsSL -X POST \
+            'https://komo.sertay.com/listener/github/procedure/69275f471f9db065fe5d85ee/main' \
+            -H 'Content-Type: application/json' \
+            -H "X-Hub-Signature-256: sha256=$sig" \
+            --data "$payload"
+
       # Sign the resulting Docker image digest except on PRs.
       # This will only write to the public Rekor transparency log when the Docker
       # repository is public to avoid leaking data.  If you would like to publish
