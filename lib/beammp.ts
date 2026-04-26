@@ -36,7 +36,7 @@ export type BeammpState = {
   dockerControl: DockerControlState
   serverMods: ModsDirectoryState
   clientMods: ModsDirectoryState
-  availableMaps: string[]
+  availableMaps: { mapName: string; zipFile: string }[]
 }
 
 export type DockerControlState = {
@@ -396,7 +396,9 @@ async function readZipEntryPaths(filePath: string): Promise<string[]> {
   }
 }
 
-async function scanClientModsForMaps(clientModsPath: string | null): Promise<string[]> {
+async function scanClientModsForMaps(
+  clientModsPath: string | null
+): Promise<{ mapName: string; zipFile: string }[]> {
   if (!clientModsPath) {
     console.log("[map-scan] BEAMMP_CLIENT_MODS_PATH not set — skipping map detection")
     return []
@@ -406,32 +408,36 @@ async function scanClientModsForMaps(clientModsPath: string | null): Promise<str
     const entries = await readdir(clientModsPath)
     const zips = entries.filter((e) => e.toLowerCase().endsWith(".zip"))
     console.log(`[map-scan] Found ${zips.length} zip(s) in client mods folder`)
-    const found = new Set<string>()
+    const found: { mapName: string; zipFile: string }[] = []
+    const seen = new Set<string>()
     await Promise.all(
       zips.map(async (zipFile) => {
-          try {
-            const paths = await readZipEntryPaths(join(clientModsPath, zipFile))
-            const mapsInZip = new Set<string>()
-            for (const p of paths) {
-              const m = p.match(/^levels\/([^/]+)\//)
-              if (m) {
-                found.add(m[1])
-                mapsInZip.add(m[1])
+        try {
+          const paths = await readZipEntryPaths(join(clientModsPath, zipFile))
+          const mapsInZip = new Set<string>()
+          for (const p of paths) {
+            const m = p.match(/^levels\/([^/]+)\//)
+            if (m) mapsInZip.add(m[1])
+          }
+          if (mapsInZip.size > 0) {
+            console.log(`[map-scan] ${zipFile} → maps: ${[...mapsInZip].join(", ")}`)
+            for (const mapName of mapsInZip) {
+              if (!seen.has(mapName)) {
+                seen.add(mapName)
+                found.push({ mapName, zipFile })
               }
             }
-            if (mapsInZip.size > 0) {
-              console.log(`[map-scan] ${zipFile} → maps: ${[...mapsInZip].join(", ")}`)
-            } else {
-              console.log(`[map-scan] ${zipFile} → no levels/ hierarchy (mod, not a map)`)
-            }
-          } catch (err) {
-            console.warn(`[map-scan] ${zipFile} → skipped (${err instanceof Error ? err.message : err})`)
+          } else {
+            console.log(`[map-scan] ${zipFile} → no levels/ hierarchy (mod, not a map)`)
           }
-        })
+        } catch (err) {
+          console.warn(`[map-scan] ${zipFile} → skipped (${err instanceof Error ? err.message : err})`)
+        }
+      })
     )
-    const result = [...found].sort(fileSorter.compare)
-    console.log(`[map-scan] Detected maps: ${result.length > 0 ? result.join(", ") : "(none)"}`)
-    return result
+    found.sort((a, b) => fileSorter.compare(a.mapName, b.mapName))
+    console.log(`[map-scan] Detected maps: ${found.length > 0 ? found.map((e) => e.mapName).join(", ") : "(none)"}`)
+    return found
   } catch (err) {
     console.error(`[map-scan] Failed to read ${clientModsPath}:`, err)
     return []

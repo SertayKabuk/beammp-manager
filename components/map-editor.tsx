@@ -16,15 +16,27 @@ const initialState: UpdateMapState = {
   status: "idle",
 }
 
+type MapEntry = { mapName: string; zipFile: string }
+
 type MapEditorProps = {
   currentMap: string
   canWrite: boolean
   runtimeEnvFile: string | null
-  availableMaps: string[]
+  availableMaps: MapEntry[]
 }
 
 function mapToPath(mapName: string) {
   return `/levels/${mapName}/info.json`
+}
+
+function groupByZip(maps: MapEntry[]): Map<string, string[]> {
+  const groups = new Map<string, string[]>()
+  for (const { mapName, zipFile } of maps) {
+    const existing = groups.get(zipFile)
+    if (existing) existing.push(mapName)
+    else groups.set(zipFile, [mapName])
+  }
+  return groups
 }
 
 export function MapEditor({
@@ -38,12 +50,13 @@ export function MapEditor({
     initialState
   )
 
-  const knownPath = availableMaps.find((m) => mapToPath(m) === currentMap)
+  const knownEntry = availableMaps.find((e) => mapToPath(e.mapName) === currentMap)
   const [selected, setSelected] = useState<string>(
-    knownPath ? currentMap : CUSTOM_VALUE
+    knownEntry ? currentMap : CUSTOM_VALUE
   )
 
   const isCustom = selected === CUSTOM_VALUE
+  const groups = groupByZip(availableMaps)
 
   return (
     <form action={formAction} className="space-y-4">
@@ -58,10 +71,14 @@ export function MapEditor({
           disabled={!canWrite || isPending}
           className={selectCn}
         >
-          {availableMaps.map((m) => (
-            <option key={m} value={mapToPath(m)}>
-              {m}
-            </option>
+          {[...groups.entries()].map(([zipFile, mapNames]) => (
+            <optgroup key={zipFile} label={zipFile}>
+              {mapNames.map((mapName) => (
+                <option key={mapName} value={mapToPath(mapName)}>
+                  {mapName}
+                </option>
+              ))}
+            </optgroup>
           ))}
           <option value={CUSTOM_VALUE}>Custom path…</option>
         </select>
