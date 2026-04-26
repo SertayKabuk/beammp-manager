@@ -30,17 +30,7 @@ export function RestartServerForm({
         <Button
           type="submit"
           name="operation"
-          value="restart"
-          disabled={!canControl || isPending}
-        >
-          {isPending ? "Working..." : "Restart BeamMP server"}
-        </Button>
-
-        <Button
-          type="submit"
-          name="operation"
           value="recreate"
-          variant="outline"
           disabled={!canControl || isPending}
         >
           {isPending ? "Working..." : "Recreate BeamMP server"}

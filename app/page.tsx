@@ -98,8 +98,8 @@ export default async function Home() {
                     Map / level selection
                   </CardTitle>
                   <CardDescription>
-                    Free-text editor for the BeamMP map path using the existing{" "}
-                    <code>BEAMMP_MAP</code> env name.
+                    Select from maps detected in the client mods folder, or
+                    enter a custom path. Saved to <code>BEAMMP_MAP</code>.
                   </CardDescription>
                 </div>
 
@@ -120,6 +120,7 @@ export default async function Home() {
                 currentMap={state.currentMap}
                 canWrite={state.canWrite}
                 runtimeEnvFile={state.runtimeEnvFile}
+                availableMaps={state.availableMaps}
               />
 
               {state.runtimeEnvError ? (

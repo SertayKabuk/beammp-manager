@@ -5,6 +5,7 @@ import { constants } from "node:fs"
 import {
   access,
   mkdir,
+  open,
   readFile,
   readdir,
   rm,
@@ -35,6 +36,7 @@ export type BeammpState = {
   dockerControl: DockerControlState
   serverMods: ModsDirectoryState
   clientMods: ModsDirectoryState
+  availableMaps: string[]
 }
 
 export type DockerControlState = {
@@ -351,6 +353,75 @@ async function inspectDockerControl(): Promise<DockerControlState> {
   }
 }
 
+async function readZipEntryPaths(filePath: string): Promise<string[]> {
+  const fh = await open(filePath, "r")
+  try {
+    const { size } = await fh.stat()
+    if (size < 22) return []
+
+    const tailSize = Math.min(65558, size)
+    const tail = Buffer.allocUnsafe(tailSize)
+    await fh.read(tail, 0, tailSize, size - tailSize)
+
+    let eocdPos = -1
+    for (let i = tailSize - 22; i >= 0; i--) {
+      if (tail.readUInt32LE(i) === 0x06054b50) {
+        eocdPos = i
+        break
+      }
+    }
+    if (eocdPos === -1) return []
+
+    const cdOffset = tail.readUInt32LE(eocdPos + 16)
+    const cdSize = tail.readUInt32LE(eocdPos + 12)
+    if (cdSize === 0 || cdOffset + cdSize > size) return []
+
+    const cd = Buffer.allocUnsafe(cdSize)
+    await fh.read(cd, 0, cdSize, cdOffset)
+
+    const paths: string[] = []
+    let pos = 0
+    while (pos + 46 <= cdSize) {
+      if (cd.readUInt32LE(pos) !== 0x02014b50) break
+      const filenameLen = cd.readUInt16LE(pos + 28)
+      const extraLen = cd.readUInt16LE(pos + 30)
+      const commentLen = cd.readUInt16LE(pos + 32)
+      if (pos + 46 + filenameLen > cdSize) break
+      paths.push(cd.toString("utf8", pos + 46, pos + 46 + filenameLen))
+      pos += 46 + filenameLen + extraLen + commentLen
+    }
+    return paths
+  } finally {
+    await fh.close()
+  }
+}
+
+async function scanClientModsForMaps(clientModsPath: string | null): Promise<string[]> {
+  if (!clientModsPath) return []
+  try {
+    const entries = await readdir(clientModsPath)
+    const found = new Set<string>()
+    await Promise.all(
+      entries
+        .filter((e) => e.toLowerCase().endsWith(".zip"))
+        .map(async (zipFile) => {
+          try {
+            const paths = await readZipEntryPaths(join(clientModsPath, zipFile))
+            for (const p of paths) {
+              const m = p.match(/^[^/]+\/levels\/([^/]+)\//)
+              if (m) found.add(m[1])
+            }
+          } catch {
+            // skip corrupt or unreadable zips
+          }
+        })
+    )
+    return [...found].sort(fileSorter.compare)
+  } catch {
+    return []
+  }
+}
+
 export async function readBeammpState(): Promise<BeammpState> {
   const runtimeEnvFile = getEnv("BEAMMP_RUNTIME_ENV_FILE")
   const serverModsPath = getEnv("BEAMMP_SERVER_MODS_PATH")
@@ -381,10 +452,11 @@ export async function readBeammpState(): Promise<BeammpState> {
     }
   }
 
-  const [dockerControl, serverMods, clientMods] = await Promise.all([
+  const [dockerControl, serverMods, clientMods, availableMaps] = await Promise.all([
     inspectDockerControl(),
     inspectModsDirectory("server", "Server mods", serverModsPath),
     inspectModsDirectory("client", "Client mods", clientModsPath),
+    scanClientModsForMaps(clientModsPath),
   ])
 
   return {
@@ -396,6 +468,7 @@ export async function readBeammpState(): Promise<BeammpState> {
     dockerControl,
     serverMods,
     clientMods,
+    availableMaps,
   }
 }
 
